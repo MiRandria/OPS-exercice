@@ -1,0 +1,2 @@
+//Commande pour déployer à partir d'aws cli:
+aws cloudformation create-stack --stack-name bucket-S3 --template-body file://STD21091.yml
