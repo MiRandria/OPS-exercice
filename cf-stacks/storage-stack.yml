@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack pour créer une instance RDS de type Postgres
+
+Parameters:
+  Env:
+    Type: String
+  DBName:
+    Type: String
+    Default: mydb
+  DBClass:
+    Type: String
+    Default: db.t2.micro
+  DBAllocatedStorage:
+    Type: Number
+    Default: 10
+    MinValue: 5
+    MaxValue: 6144
+  MasterUsername:
+    Type: String
+    Default: admin
+  SecurityGroupId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /my-ssm-params/security-group-id
+
+Resources:
+  MyDB:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: mydb
+      AllocatedStorage: !Ref DBAllocatedStorage
+      DBInstanceClass: !Ref DBClass
+      Engine: postgres
+      EngineVersion: '11.10'
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: '{{resolve:ssm:/my-ssm-params/master-password:1}}'
+      VPCSecurityGroupIds:
+        - !Ref SecurityGroupId
+  DBEndpointAddress:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: /my-ssm-params/db-endpoint-address
+      Type: String
+      Value: !GetAtt MyDB.Endpoint.Address
+  DBEndpointPort:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: /my-ssm-params/db-endpoint-port
+      Type: String
+      Value: !GetAtt MyDB.Endpoint.Port
+  JDBCConnectionString:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: /my-ssm-params/jdbc-connection-string
+      Type: String
+      Value: !Sub 'jdbc:postgresql://${DBEndpointAddress.Value}:${DBEndpointPort.Value}/${DBName}'
+  
+Outputs:
+  DBName:
+    Description: 'Database Name'
+    Value: !Ref DBName
